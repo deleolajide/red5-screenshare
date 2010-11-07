@@ -3,37 +3,6 @@ package org.redfire.screen;
 import java.io.*;
 import java.util.*;
 
-import org.apache.mina.common.ByteBuffer;
-import org.red5.io.IStreamableFile;
-import org.red5.io.ITag;
-import org.red5.io.ITagWriter;
-import org.red5.io.ITagReader;
-import org.red5.io.flv.impl.FLVService;
-import org.red5.io.flv.impl.FLV;
-import org.red5.io.flv.impl.FLVReader;
-import org.red5.io.flv.impl.Tag;
-import org.red5.io.IoConstants;
-import org.red5.io.utils.ObjectMap;
-import org.red5.server.api.event.IEvent;
-import org.red5.server.api.event.IEventDispatcher;
-import org.red5.server.api.service.IPendingServiceCall;
-import org.red5.server.api.service.IPendingServiceCallback;
-import org.red5.server.net.rtmp.Channel;
-import org.red5.server.net.rtmp.RTMPClient;
-import org.red5.server.net.rtmp.INetStreamEventHandler;
-import org.red5.server.net.rtmp.RTMPConnection;
-import org.red5.server.net.rtmp.ClientExceptionHandler;
-import org.red5.server.net.rtmp.codec.RTMP;
-import org.red5.server.net.rtmp.event.IRTMPEvent;
-import org.red5.server.net.rtmp.event.Notify;
-import org.red5.server.net.rtmp.event.VideoData;
-import org.red5.server.net.rtmp.message.Header;
-import org.red5.server.net.rtmp.status.StatusCodes;
-import org.red5.server.net.rtmp.event.SerializeUtils;
-import org.red5.server.stream.AbstractClientStream;
-import org.red5.server.stream.IStreamData;
-import org.red5.server.stream.message.RTMPMessage;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,31 +18,46 @@ import java.io.OutputStream;
 import java.util.Map;
 import java.util.zip.DeflaterOutputStream;
 import java.util.Date;
-
-
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
+import com.flazr.util.Utils;
+import com.flazr.rtmp.*;
+import com.flazr.rtmp.client.ClientOptions;
+import com.flazr.rtmp.message.*;
 
-public class ScreenShare extends RTMPClient implements INetStreamEventHandler, ClientExceptionHandler, IPendingServiceCallback {
+import java.net.InetSocketAddress;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import org.jboss.netty.bootstrap.ClientBootstrap;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+
+public class ScreenShare {
 
     private static final Logger logger = LoggerFactory.getLogger( ScreenShare.class );
     public static ScreenShare instance = null;
+	public static ClientOptions options;
 
     public boolean startPublish = false;
     public Integer playStreamId;
     public Integer publishStreamId;
     public String publishName;
-    public RTMPConnection conn;
-    public ITagWriter writer;
-    public ITagReader reader;
     public int videoTs = 0;
     public int audioTs = 0;
     public int kt = 0;
     public int kt2 = 0;
-    public ByteBuffer buffer;
 	public CaptureScreen capture = null;
 	public Thread thread = null;
 
@@ -110,6 +94,9 @@ public class ScreenShare extends RTMPClient implements INetStreamEventHandler, C
 
 	public Float imgQuality = new Float(0.40);
 
+	private Channel clientChannel;
+	private ScreenPublisher publisher;
+
     // ------------------------------------------------------------------------
     //
     // Main
@@ -126,6 +113,10 @@ public class ScreenShare extends RTMPClient implements INetStreamEventHandler, C
 			instance.app = args[1];
 			instance.port = Integer.parseInt(args[2]);
 			instance.publishName = args[3];
+
+			options = new ClientOptions(instance.host, instance.port, instance.app, instance.publishName, null, false, null);
+			options.publishLive();
+			options.setClientVersionToUse(Utils.fromHex("00000000"));
 
 		} else {
 			instance = null;
@@ -152,7 +143,7 @@ public class ScreenShare extends RTMPClient implements INetStreamEventHandler, C
 			//UIManager.setLookAndFeel(new com.incors.plaf.kunststoff.KunststoffLookAndFeel());
 			//UIManager.getLookAndFeelDefaults().put( "ClassLoader", getClass().getClassLoader()  );
 
-			t = new JFrame("Red5ScreenShare Publisher");
+			t = new JFrame("Desktop Publisher");
 			contentPane = t.getContentPane();
 			contentPane.setBackground(Color.WHITE);
 			textArea = new JLabel();
@@ -240,7 +231,7 @@ public class ScreenShare extends RTMPClient implements INetStreamEventHandler, C
 	private void captureScreenStart()
 	{
 		try {
-			startButton.setEnabled(false);
+
 			System.err.println("captureScreenStart");
 
 			startStream(host, app, port, publishName);
@@ -283,14 +274,22 @@ public class ScreenShare extends RTMPClient implements INetStreamEventHandler, C
         kt = 0;
         kt2 = 0;
 
-        try {
-            connect( host, port, app, this );
+		ExecutorService executor = Executors.newCachedThreadPool();
 
-        }
-        catch ( Exception e ) {
-            logger.error( "ScreenShare startStream exception " + e );
-        }
+        executor.submit(new Callable<Boolean>()
+        {
+            public Boolean call() throws Exception
+            {
+                try {
+            		connect(options);
+                }
+                catch (Exception e) {
+            		logger.error( "ScreenShare startStream exception " + e );
+                }
 
+                return true;
+            }
+        });
     }
 
 
@@ -303,6 +302,7 @@ public class ScreenShare extends RTMPClient implements INetStreamEventHandler, C
             capture.stop();
             capture.release();
             thread = null;
+            startPublish = false;
         }
         catch ( Exception e ) {
             logger.error( "ScreenShare stopStream exception " + e );
@@ -317,88 +317,80 @@ public class ScreenShare extends RTMPClient implements INetStreamEventHandler, C
     //
     // ------------------------------------------------------------------------
 
-	public void handleException(Throwable throwable)
-	{
-			logger.error("{}",new Object[]{throwable.getCause()});
-			System.out.println( throwable.getCause() );
-	}
+    public void connect(final ClientOptions options)
+    {
+        final ClientBootstrap bootstrap = getBootstrap(Executors.newCachedThreadPool(), options);
+        final ChannelFuture future = bootstrap.connect(new InetSocketAddress(options.getHost(), options.getPort()));
+        future.awaitUninterruptibly();
 
-
-    public void onStreamEvent( Notify notify ) {
-
-        logger.debug( "onStreamEvent " + notify );
-
-        ObjectMap map = (ObjectMap) notify.getCall().getArguments()[ 0 ];
-        String code = (String) map.get( "code" );
-
-        if ( StatusCodes.NS_PUBLISH_START.equals( code ) ) {
-            logger.debug( "onStreamEvent Publish start" );
-            startPublish = true;
-        }
-    }
-
-
-    public void resultReceived( IPendingServiceCall call ) {
-
-        logger.debug( "service call result: " + call );
-
-        if ( "connect".equals( call.getServiceMethodName() ) )
+        if(!future.isSuccess())
         {
-			createStream( this );
-
-		} else {
-			publishStreamId = (Integer) call.getResult();
-			logger.debug( "createPublishStream result stream id: " + publishStreamId );
-			logger.debug( "publishing video by name: " + publishName );
-			publish( publishStreamId, publishName, "live", this );
-
-			logger.debug( "setup capture thread");
-
-			capture = new CaptureScreen(VirtualScreenBean.vScreenSpinnerX,
-										VirtualScreenBean.vScreenSpinnerY,
-										VirtualScreenBean.vScreenSpinnerWidth,
-										VirtualScreenBean.vScreenSpinnerHeight);
-
-			if (thread == null)
-			{
-				thread = new Thread(capture);
-				thread.start();
-			}
-			capture.start();
-
-			startButton.setEnabled(false);
-			stopButton.setEnabled(true);
+            // future.getCause().printStackTrace();
+            logger.error("error creating client connection: {}", future.getCause().getMessage());
         }
+
+		clientChannel = future.getChannel();
+        future.getChannel().getCloseFuture().awaitUninterruptibly();
+        bootstrap.getFactory().releaseExternalResources();
     }
 
+    public void disconnect()
+    {
+		final ChannelFuture future = clientChannel.disconnect();
+        future.awaitUninterruptibly();
+        clientChannel.getFactory().releaseExternalResources();
+    }
 
-    public void pushVideo( int len, byte[] video, long ts) throws IOException {
+    private ClientBootstrap getBootstrap(final Executor executor, final ClientOptions options)
+    {
+        final ChannelFactory factory = new NioClientSocketChannelFactory(executor, executor);
+        final ClientBootstrap bootstrap = new ClientBootstrap(factory);
+        bootstrap.setPipelineFactory(new ScreenClientPipelineFactory(options, this));
+        bootstrap.setOption("tcpNoDelay" , true);
+        bootstrap.setOption("keepAlive", true);
+        return bootstrap;
+    }
+
+    public void screenPublish(ScreenPublisher publisher )
+    {
+		this.publisher = publisher;
+
+		logger.debug( "setup capture thread");
+
+		capture = new CaptureScreen(VirtualScreenBean.vScreenSpinnerX,
+									VirtualScreenBean.vScreenSpinnerY,
+									VirtualScreenBean.vScreenSpinnerWidth,
+									VirtualScreenBean.vScreenSpinnerHeight);
+
+		if (thread == null)
+		{
+			thread = new Thread(capture);
+			thread.start();
+		}
+
+		capture.start();
+		startButton.setEnabled(false);
+		stopButton.setEnabled(true);
+		startPublish = true;
+    }
+
+    public void pushVideo(byte[] video, long ts) throws IOException {
 
 		if (!startPublish) return;
 
-        if ( buffer == null ) {
-            buffer = ByteBuffer.allocate( 1024 );
-            buffer.setAutoExpand( true );
-        }
-
-        buffer.clear();
-        buffer.put( video );
-        buffer.flip();
-
-        VideoData videoData = new VideoData( buffer );
-        videoData.setTimestamp( (int) ts );
+		RtmpMessage rtmpMsg = new Video(video);
+		rtmpMsg.getHeader().setTime((int)ts);
+		publisher.write(clientChannel, rtmpMsg);
 
         kt++;
 
         if ( kt < 10 ) {
-            logger.debug( "+++ " + videoData );
-            System.out.println( "+++ " + videoData);
+            logger.debug( "+++ " + rtmpMsg );
+            System.out.println( "+++ " + rtmpMsg);
         }
 
-        RTMPMessage rtmpMsg = new RTMPMessage();
-        rtmpMsg.setBody( videoData );
-        publishStreamData( publishStreamId, rtmpMsg );
     }
+
 
 	// ------------------------------------------------------------------------
 	//
@@ -501,7 +493,7 @@ public class ScreenShare extends RTMPClient implements INetStreamEventHandler, C
 						timestamp += (1000000 / timeBetweenFrames);
 
 						final byte[] screenBytes = encode(current, previous, blockWidth, blockHeight, width, height);
-						pushVideo( screenBytes.length, screenBytes, timestamp);
+						pushVideo(screenBytes, timestamp);
 						previous = current;
 
 						if (++frameCounter % 100 == 0) previous = null;
