@@ -54,10 +54,7 @@ public class ScreenShare {
     public Integer playStreamId;
     public Integer publishStreamId;
     public String publishName;
-    public int videoTs = 0;
-    public int audioTs = 0;
-    public int kt = 0;
-    public int kt2 = 0;
+
 	public CaptureScreen capture = null;
 	public Thread thread = null;
 
@@ -96,6 +93,9 @@ public class ScreenShare {
 
 	private Channel clientChannel;
 	private ScreenPublisher publisher;
+
+	private long startTime;
+    private int kt = 0;
 
     // ------------------------------------------------------------------------
     //
@@ -269,10 +269,8 @@ public class ScreenShare {
         System.out.println( "ScreenShare startStream" );
         this.publishName = publishName;
 
-        videoTs = 0;
-        audioTs = 0;
-        kt = 0;
-        kt2 = 0;
+		startTime = System.currentTimeMillis();
+		kt = 0;
 
 		ExecutorService executor = Executors.newCachedThreadPool();
 
@@ -490,7 +488,7 @@ public class ScreenShare {
 
 					try
 					{
-						timestamp += (1000000 / timeBetweenFrames);
+						timestamp =  System.currentTimeMillis() - startTime;
 
 						final byte[] screenBytes = encode(current, previous, blockWidth, blockHeight, width, height);
 						pushVideo(screenBytes, timestamp);
