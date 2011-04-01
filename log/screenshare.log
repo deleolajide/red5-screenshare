@@ -1,0 +1,48 @@
+2011-03-31 09:45:17,090 [pool-1-thread-1] INFO  o.r.screen.ScreenClientHandler - channel opened: [id: 0x010dc656] OPEN
+2011-03-31 09:45:17,571 [New I/O client worker #1-1] INFO  o.r.s.ScreenClientHandshakeHandler - connected, starting handshake
+2011-03-31 09:45:17,681 [New I/O client worker #1-1] INFO  com.flazr.rtmp.RtmpHandshake - using client version 00000000
+2011-03-31 09:45:20,565 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - handshake complete, sending 'connect'
+2011-03-31 09:45:20,605 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - sending command (expecting result): [0 COMMAND_AMF0 c3 #0 t0 (0) s0] name: connect, transactionId: 1, object: {app=xmpp, flashVer=WIN 9,0,124,2, tcUrl=rtmp://btg199251:1935/xmpp, fpad=false, audioCodecs=1639.0, videoCodecs=252.0, objectEncoding=0.0, capabilities=15.0, videoFunction=1.0}, args: null
+2011-03-31 09:45:22,548 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - server command: _result
+2011-03-31 09:45:22,548 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - result for method call: connect
+2011-03-31 09:45:22,548 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - sending command (expecting result): [0 COMMAND_AMF0 c3 #0 t0 (0) s0] name: createStream, transactionId: 2, object: null, args: []
+2011-03-31 09:45:22,839 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - server command: _result
+2011-03-31 09:45:22,849 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - result for method call: createStream
+2011-03-31 09:45:24,671 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - server command: onStatus
+2011-03-31 09:45:24,671 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - onStatus code: NetStream.Publish.Start
+2011-03-31 09:45:26,384 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - ack from server: [1 BYTES_READ c2 #0 t0 (0) s4] 129375
+2011-03-31 09:45:39,412 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - ack from server: [1 BYTES_READ c2 #0 t0 (0) s4] 260447
+2011-03-31 09:45:39,713 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - ack from server: [1 BYTES_READ c2 #0 t0 (0) s4] 375972
+2011-03-31 09:45:49,477 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - ack from server: [1 BYTES_READ c2 #0 t0 (0) s4] 499351
+2011-03-31 09:46:01,664 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - ack from server: [1 BYTES_READ c2 #0 t0 (0) s4] 621614
+2011-03-31 09:46:13,692 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - ack from server: [1 BYTES_READ c2 #0 t0 (0) s4] 744377
+2011-03-31 09:46:25,429 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - ack from server: [1 BYTES_READ c2 #0 t0 (0) s4] 867371
+2011-03-31 09:46:35,894 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - server command: mouseMove
+2011-03-31 09:46:35,894 [New I/O client worker #1-1] INFO  org.redfire.screen.ScreenShare - mouseMove 527.0 186.0 959.0 631.0
+2011-03-31 09:46:35,924 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - mouseMove: 527.0 186.0 959.0 631.0
+2011-03-31 09:46:37,426 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - ack from server: [1 BYTES_READ c2 #0 t0 (0) s4] 1003453
+2011-03-31 09:46:40,931 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - server command: mouseMove
+2011-03-31 09:46:40,931 [New I/O client worker #1-1] INFO  org.redfire.screen.ScreenShare - mouseMove 27.0 139.0 959.0 631.0
+2011-03-31 09:46:40,931 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - mouseMove: 27.0 139.0 959.0 631.0
+2011-03-31 09:46:49,493 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - ack from server: [1 BYTES_READ c2 #0 t0 (0) s4] 1141653
+2011-03-31 09:46:49,764 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - server command: mouseMove
+2011-03-31 09:46:49,764 [New I/O client worker #1-1] INFO  org.redfire.screen.ScreenShare - mouseMove 518.0 0.0 959.0 631.0
+2011-03-31 09:46:49,764 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - mouseMove: 518.0 0.0 959.0 631.0
+2011-03-31 09:47:01,530 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - ack from server: [1 BYTES_READ c2 #0 t0 (0) s4] 1263458
+2011-03-31 09:47:13,548 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - ack from server: [1 BYTES_READ c2 #0 t0 (0) s4] 1391173
+2011-03-31 09:47:25,635 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - ack from server: [1 BYTES_READ c2 #0 t0 (0) s4] 1517586
+2011-03-31 09:47:37,582 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - ack from server: [1 BYTES_READ c2 #0 t0 (0) s4] 1642963
+2011-03-31 09:47:49,620 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - ack from server: [1 BYTES_READ c2 #0 t0 (0) s4] 1768223
+2011-03-31 09:48:01,627 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - ack from server: [1 BYTES_READ c2 #0 t0 (0) s4] 1892422
+2011-03-31 09:48:13,744 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - ack from server: [1 BYTES_READ c2 #0 t0 (0) s4] 2017530
+2011-03-31 09:48:25,641 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - ack from server: [1 BYTES_READ c2 #0 t0 (0) s4] 2139397
+2011-03-31 09:48:37,679 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - ack from server: [1 BYTES_READ c2 #0 t0 (0) s4] 2260177
+2011-03-31 09:48:49,646 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - ack from server: [1 BYTES_READ c2 #0 t0 (0) s4] 2380087
+2011-03-31 09:49:01,683 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - ack from server: [1 BYTES_READ c2 #0 t0 (0) s4] 2498829
+2011-03-31 09:49:13,731 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - ack from server: [1 BYTES_READ c2 #0 t0 (0) s4] 2617020
+2011-03-31 09:49:25,748 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - ack from server: [1 BYTES_READ c2 #0 t0 (0) s4] 2735562
+2011-03-31 09:49:37,825 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - ack from server: [1 BYTES_READ c2 #0 t0 (0) s4] 2851340
+2011-03-31 09:49:49,722 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - ack from server: [1 BYTES_READ c2 #0 t0 (0) s4] 2967138
+2011-03-31 09:50:01,740 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - ack from server: [1 BYTES_READ c2 #0 t0 (0) s4] 3082902
+2011-03-31 09:50:13,797 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - ack from server: [1 BYTES_READ c2 #0 t0 (0) s4] 3198672
+2011-03-31 09:50:18,794 [AWT-EventQueue-0] INFO  o.r.screen.ScreenClientHandler - channel closed: [id: 0x010dc656, /192.168.1.64:1416 => btg199251/192.168.1.64:1935] CLOSED

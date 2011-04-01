@@ -1,0 +1,76 @@
+<html>
+<head>
+<title>ScreenViewer</title>
+	<script type="text/javascript" src="swfobject.js"></script>
+	<script type="text/javascript">
+
+	var screenViewer = null;
+
+	function setupApp()
+	{
+		screenViewer = document.getElementById("screenViewerID");
+
+	}
+
+	function stopApp()
+	{
+		if (screenViewer != null)
+		{
+			screenViewer.windowCloseEvent();
+		}
+	}
+
+function getParameter(string, parm, delim) {
+
+     if (string.length == 0) {
+     	return '';
+     }
+
+	 var sPos = string.indexOf(parm + "=");
+
+     if (sPos == -1) {return '';}
+
+     sPos = sPos + parm.length + 1;
+     var ePos = string.indexOf(delim, sPos);
+
+     if (ePos == -1) {
+     	ePos = string.length;
+     }
+
+     return unescape(string.substring(sPos, ePos));
+}
+
+function getPageParameter(parameterName, defaultValue) {
+
+	var s = self.location.search;
+
+	if ((s == null) || (s.length < 1)) {
+		return defaultValue;
+	}
+
+	s = getParameter(s, parameterName, '&');
+
+	if ((s == null) || (s.length < 1)) {
+		s = defaultValue;
+	}
+
+	return s;
+}
+
+	</script>
+</head>
+<body topmargin="0" leftmargin="0" bottommargin="0" rightmargin="0" onload="setupApp()" onUnload="stopApp()">
+<div id="screenViewerDIV"></div>
+<script type="text/javascript">
+
+		var stream = getPageParameter('stream', 'screen_share');
+		var url = getPageParameter('url', 'rtmp:/xmpp');
+		var control = getPageParameter('control', 'true');
+
+		fo = new SWFObject("ScreenViewer.swf?rtmpUrl=" + url + "&recieverStream=" + stream + "&control=" + control, "screenViewerID", "100%", "100%", "9");
+		fo.addParam("swLiveConnect", "true");
+		fo.addParam("name", "screenViewerID");
+		fo.write("screenViewerDIV");
+</script>
+</body>
+</html>
