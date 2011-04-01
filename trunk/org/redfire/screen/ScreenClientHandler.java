@@ -171,73 +171,132 @@ public class ScreenClientHandler extends SimpleChannelUpstreamHandler {
             case COMMAND_AMF3:
                 Command command = (Command) message;
                 String name = command.getName();
-                logger.debug("server command: {}", name);
-                if(name.equals("_result")) {
-                    String resultFor = transactionToCommandMap.get(command.getTransactionId());
-                    logger.info("result for method call: {}", resultFor);
-                    if(resultFor.equals("connect")) {
-                        writeCommandExpectingResult(channel, Command.createStream());
+                logger.info("server command: {}", name);
 
-                    } else if(resultFor.equals("createStream")) {
-                        streamId = ((Double) command.getArg(0)).intValue();
-                        logger.debug("streamId to use: {}", streamId);
+				try {
 
-                        if(options.getPublishType() != null) { // TODO append, record
+					if(name.equals("_result"))
+					{
+						String resultFor = transactionToCommandMap.get(command.getTransactionId());
+						logger.info("result for method call: {}", resultFor);
 
-                            publisher = new ScreenPublisher(screenShare, streamId, options.getBuffer(), false, false)
-                            {
-                                @Override protected RtmpMessage[] getStopMessages(long timePosition) {
-                                    return new RtmpMessage[]{Command.unpublish(streamId)};
-                                }
-                            };
+						if(resultFor.equals("connect"))
+						{
+							writeCommandExpectingResult(channel, Command.createStream());
 
-                            channel.write(Command.publish(streamId, options));
-                            return;
-                        } else {
-                            writer = options.getWriterToSave();
-                            if(writer == null) {
-                                writer = new FlvWriter(options.getStart(), options.getSaveAs());
-                            }
-                            channel.write(Command.play(streamId, options));
-                            channel.write(Control.setBuffer(streamId, 0));
-                        }
-                    } else {
-                        logger.warn("un-handled server result for: {}", resultFor);
-                    }
-                } else if(name.equals("onStatus")) {
-                    final Map<String, Object> temp = (Map) command.getArg(0);
-                    final String code = (String) temp.get("code");
-                    logger.info("onStatus code: {}", code);
-                    if (code.equals("NetStream.Failed") // TODO cleanup
-                            || code.equals("NetStream.Play.Failed")
-                            || code.equals("NetStream.Play.Stop")
-                            || code.equals("NetStream.Play.StreamNotFound")) {
-                        logger.info("disconnecting, code: {}, bytes read: {}", code, bytesRead);
-                        channel.close();
-                        return;
-                    }
-                    if (code.equals("NetStream.Publish.Start") && publisher != null && !publisher.isStarted())
-                    {
-                        publisher.start(channel, options.getStart(), options.getLength(), new ChunkSize(4096));
-                        return;
-                    }
-                    if (publisher != null && code.equals("NetStream.Unpublish.Success")) {
-                        logger.info("unpublish success, closing channel");
-                        ChannelFuture future = channel.write(Command.closeStream(streamId));
-                        future.addListener(ChannelFutureListener.CLOSE);
-                        return;
-                    }
-                } else if(name.equals("close")) {
-                    logger.info("server called close, closing channel");
-                    channel.close();
-                    return;
-                } else if(name.equals("_error")) {
-                    logger.error("closing channel, server resonded with error: {}", command);
-                    channel.close();
-                    return;
-                } else {
-                    logger.warn("ignoring server command: {}", command);
-                }
+						} else if(resultFor.equals("createStream")) {
+							streamId = ((Double) command.getArg(0)).intValue();
+							logger.debug("streamId to use: {}", streamId);
+
+							if(options.getPublishType() != null) { // TODO append, record
+
+								publisher = new ScreenPublisher(screenShare, streamId, options.getBuffer(), false, false)
+								{
+									@Override protected RtmpMessage[] getStopMessages(long timePosition) {
+										return new RtmpMessage[]{Command.unpublish(streamId)};
+									}
+								};
+
+								channel.write(Command.publish(streamId, options));
+								return;
+							} else {
+								writer = options.getWriterToSave();
+								if(writer == null) {
+									writer = new FlvWriter(options.getStart(), options.getSaveAs());
+								}
+								channel.write(Command.play(streamId, options));
+								channel.write(Control.setBuffer(streamId, 0));
+							}
+						} else {
+							logger.warn("un-handled server result for: {}", resultFor);
+						}
+
+					} else if(name.equals("mousePress")) {
+
+						double button = ((Double) command.getArg(0));
+						screenShare.mousePress(button);
+						logger.info(name + ": " + button);
+
+					} else if(name.equals("mouseRelease")) {
+
+						double button = ((Double) command.getArg(0));
+						screenShare.mouseRelease(button);
+						logger.info(name + ": " + button);
+
+					} else if(name.equals("mouseMove")) {
+
+						double x = ((Double) command.getArg(0));
+						double y = ((Double) command.getArg(1));
+						double width = ((Double) command.getArg(2));
+						double height = ((Double) command.getArg(3));
+						screenShare.mouseMove(x, y, width, height);
+
+						logger.info(name + ": " + x + " " + y + " " + width + " " + height);
+
+
+					} else if(name.equals("doubleClick")) {
+
+						double x = ((Double) command.getArg(0));
+						double y = ((Double) command.getArg(1));
+						double width = ((Double) command.getArg(2));
+						double height = ((Double) command.getArg(3));
+						screenShare.doubleClick(x, y, width, height);
+
+						logger.info(name + ": " + x + " " + y + " " + width + " " + height);
+
+					} else if(name.equals("keyPress")) {
+
+						double key = ((Double) command.getArg(0));
+						screenShare.keyPress(key);
+						logger.info(name + ": " + key);
+
+					} else if(name.equals("keyRelease")) {
+
+						double key = ((Double) command.getArg(0));
+						screenShare.keyRelease(key);
+						logger.info(name + ": " + key);
+
+
+					} else if(name.equals("onStatus")) {
+						final Map<String, Object> temp = (Map) command.getArg(0);
+						final String code = (String) temp.get("code");
+						logger.info("onStatus code: {}", code);
+						if (code.equals("NetStream.Failed") // TODO cleanup
+								|| code.equals("NetStream.Play.Failed")
+								|| code.equals("NetStream.Play.Stop")
+								|| code.equals("NetStream.Play.StreamNotFound")) {
+							logger.info("disconnecting, code: {}, bytes read: {}", code, bytesRead);
+							channel.close();
+							return;
+						}
+						if (code.equals("NetStream.Publish.Start") && publisher != null && !publisher.isStarted())
+						{
+							publisher.start(channel, options.getStart(), options.getLength(), new ChunkSize(4096));
+							return;
+						}
+						if (publisher != null && code.equals("NetStream.Unpublish.Success")) {
+							logger.info("unpublish success, closing channel");
+							ChannelFuture future = channel.write(Command.closeStream(streamId));
+							future.addListener(ChannelFutureListener.CLOSE);
+							return;
+						}
+					} else if(name.equals("close")) {
+						logger.info("server called close, closing channel");
+						channel.close();
+						return;
+					} else if(name.equals("_error")) {
+						logger.error("closing channel, server resonded with error: {}", command);
+						channel.close();
+						return;
+					} else {
+						logger.warn("ignoring server command: {}", command);
+					}
+
+				} catch (Exception e) {
+
+					logger.error("AMF processing error: {}", e);
+				}
+
                 break;
             case BYTES_READ:
                 logger.info("ack from server: {}", message);
@@ -255,6 +314,7 @@ public class ScreenClientHandler extends SimpleChannelUpstreamHandler {
                 }
                 break;
             default:
+
             logger.info("ignoring rtmp message: {}", message);
         }
         if(publisher != null && publisher.isStarted()) { // TODO better state machine

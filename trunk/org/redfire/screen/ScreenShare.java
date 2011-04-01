@@ -6,13 +6,10 @@ import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.awt.Rectangle;
-import java.awt.Robot;
-import java.awt.image.BufferedImage;
-import java.awt.image.DataBuffer;
 import java.awt.*;
 import java.awt.event.*;
-import java.awt.image.BufferedImage;
+import java.awt.image.*;
+import java.awt.geom.AffineTransform;
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.util.Map;
@@ -54,12 +51,14 @@ public class ScreenShare {
     public Integer playStreamId;
     public Integer publishStreamId;
     public String publishName;
+    public String codec = "flashsv1";
 
 	public CaptureScreen capture = null;
 	public Thread thread = null;
+	public Robot robot;
 
 	public java.awt.Container contentPane;
-	public JFrame t;
+	public JFrame t = null;
 	public JLabel textArea;
 	public JLabel textWarningArea;
 	public JLabel textAreaQualy;
@@ -106,17 +105,17 @@ public class ScreenShare {
 
 	public static void main(String[] args)
 	{
-		instance = new ScreenShare();
+		instance = ScreenShare.getInstance();
 
-		if (args.length == 4) {
+		if (args.length == 5) {
 			instance.host = args[0];
 			instance.app = args[1];
 			instance.port = Integer.parseInt(args[2]);
 			instance.publishName = args[3];
+			instance.codec = args[4];
 
-			options = new ClientOptions(instance.host, instance.port, instance.app, instance.publishName, null, false, null);
-			options.publishLive();
-			options.setClientVersionToUse(Utils.fromHex("00000000"));
+			System.out.println("User home " + System.getProperty("user.home"));
+			System.out.println("User Dir " + System.getProperty("user.dir"));
 
 		} else {
 			instance = null;
@@ -129,6 +128,15 @@ public class ScreenShare {
 		instance.createWindow();
 	}
 
+	private ScreenShare() {}
+
+	public static ScreenShare getInstance()
+	{
+		if (instance == null) instance = new ScreenShare();
+
+		return instance;
+	}
+
 
     // ------------------------------------------------------------------------
     //
@@ -138,7 +146,20 @@ public class ScreenShare {
 
 	public void createWindow()
 	{
+
 		try {
+
+			if (options == null)
+			{
+				options = new ClientOptions(instance.host, instance.port, instance.app, instance.publishName, null, false, null);
+				options.publishLive();
+				options.setClientVersionToUse(Utils.fromHex("00000000"));
+			}
+
+			if (t != null && t.isVisible())
+			{
+				return;
+			}
 
 			//UIManager.setLookAndFeel(new com.incors.plaf.kunststoff.KunststoffLookAndFeel());
 			//UIManager.getLookAndFeelDefaults().put( "ClassLoader", getClass().getClassLoader()  );
@@ -188,7 +209,7 @@ public class ScreenShare {
 				public void actionPerformed(ActionEvent arg0) {
 					// TODO Auto-generated method stub
 					t.setVisible(false);
-					System.exit(0);
+					stopStream();
 				}
 			});
 			exitButton.setBounds(190, 370, 200, 24);
@@ -204,7 +225,7 @@ public class ScreenShare {
 			t.addWindowListener(new WindowAdapter() {
 				public void windowClosing(WindowEvent e) {
 					t.setVisible(false);
-					System.exit(0);
+					stopStream();
 				}
 
 			});
@@ -296,14 +317,17 @@ public class ScreenShare {
         System.out.println( "ScreenShare stopStream" );
 
         try {
-            disconnect();
-            capture.stop();
-            capture.release();
             thread = null;
             startPublish = false;
+
+            disconnect();
+
+            capture.stop();
+            capture.release();
+            capture = null;
         }
         catch ( Exception e ) {
-            logger.error( "ScreenShare stopStream exception " + e );
+
         }
 
     }
@@ -353,23 +377,33 @@ public class ScreenShare {
     {
 		this.publisher = publisher;
 
-		logger.debug( "setup capture thread");
+		try {
+			this.robot = new Robot();
 
-		capture = new CaptureScreen(VirtualScreenBean.vScreenSpinnerX,
-									VirtualScreenBean.vScreenSpinnerY,
-									VirtualScreenBean.vScreenSpinnerWidth,
-									VirtualScreenBean.vScreenSpinnerHeight);
+			logger.debug( "setup capture thread");
 
-		if (thread == null)
-		{
-			thread = new Thread(capture);
-			thread.start();
+			capture = new CaptureScreen(VirtualScreenBean.vScreenSpinnerX,
+										VirtualScreenBean.vScreenSpinnerY,
+										VirtualScreenBean.vScreenSpinnerWidth,
+										VirtualScreenBean.vScreenSpinnerHeight);
+
+			if (thread == null)
+			{
+				thread = new Thread(capture);
+				thread.start();
+			}
+
+			capture.start();
+			startButton.setEnabled(false);
+			stopButton.setEnabled(true);
+			startPublish = true;
+
+		} catch (Exception e) {
+
+			logger.error("screenPublish error " + e);
+			e.printStackTrace();
+			showBandwidthWarning("Internal error capturing screen, see log file");
 		}
-
-		capture.start();
-		startButton.setEnabled(false);
-		stopButton.setEnabled(true);
-		startPublish = true;
     }
 
     public void pushVideo(byte[] video, long ts) throws IOException {
@@ -389,6 +423,89 @@ public class ScreenShare {
 
     }
 
+	public void mousePress(double button)
+	{
+		if (capture != null && robot != null)
+		{
+			logger.info("mousePress " + button);
+
+			if (button == 1) robot.mousePress(InputEvent.BUTTON1_MASK);
+			if (button == 2) robot.mousePress(InputEvent.BUTTON2_MASK);
+			if (button == 3) robot.mousePress(InputEvent.BUTTON3_MASK);
+		}
+	}
+
+	public void mouseRelease(double button)
+	{
+		if (capture != null && robot != null)
+		{
+			logger.info("mouseRelease " + button);
+
+			if (button == 1) robot.mouseRelease(InputEvent.BUTTON1_MASK);
+			if (button == 2) robot.mouseRelease(InputEvent.BUTTON2_MASK);
+			if (button == 3) robot.mouseRelease(InputEvent.BUTTON3_MASK);
+		}
+	}
+
+	public void doubleClick(double x, double y, double width, double height)
+	{
+		if (capture != null && robot != null)
+		{
+			logger.info("doubleClick " + x + " " + y + " " + width + " " + height);
+
+			int newX = (int)((x/width*capture.width) + capture.x);
+			int newY = (int)((y/height*capture.height) + capture.y);
+
+			robot.mouseMove(newX, newY);
+			robot.mousePress(InputEvent.BUTTON1_MASK);
+			robot.mouseRelease(InputEvent.BUTTON1_MASK);
+			robot.mousePress(InputEvent.BUTTON1_MASK);
+			robot.mouseRelease(InputEvent.BUTTON1_MASK);
+		}
+	}
+
+	public void keyPress(double key)
+	{
+		int newKey = translateKey(key);
+
+		if (capture != null && robot != null)
+		{
+			logger.info("keyPress " + key);
+			robot.keyPress(newKey);
+		}
+	}
+
+	public void keyRelease(double key)
+	{
+		int newKey = translateKey(key);
+
+		if (capture != null && robot != null)
+		{
+			logger.info("keyRelease " + key);
+			robot.keyRelease(newKey);
+		}
+	}
+
+	public void mouseMove(double x, double y, double width, double height)
+	{
+		if (capture != null && robot != null)
+		{
+			logger.info("mouseMove " + x + " " + y + " " + width + " " + height);
+
+			int newX = (int)((x/width*capture.width) + capture.x);
+			int newY = (int)((y/height*capture.height) + capture.y);
+
+			robot.mouseMove(newX, newY);
+		}
+	}
+
+	private int translateKey(double key)
+	{
+		if (key == 13)
+			return 10;
+		else
+			return (int) key;
+	}
 
 	// ------------------------------------------------------------------------
 	//
@@ -399,14 +516,16 @@ public class ScreenShare {
 
 	private final class CaptureScreen extends Object implements Runnable
 	{
-		private volatile int x = 0;
-		private volatile int y = 0;
-		private volatile int width = 320;
-		private volatile int height = 240;
+		public volatile int x = 0;
+		public volatile int y = 0;
+		public volatile int width = 320;
+		public volatile int height = 240;
+
 		private volatile long timestamp = 0;
 
 		private volatile boolean active = true;
 		private volatile boolean stopped = false;
+		private BufferedImage cursorImage;
 
 		// ------------------------------------------------------------------------
 		//
@@ -421,6 +540,15 @@ public class ScreenShare {
 			this.y = y;
 			this.width = width;
 			this.height = height;
+
+			try
+			{
+				cursorImage = ImageIO.read(ScreenShare.class.getResource("/cursor.gif"));
+
+			} catch (Exception e) {
+
+				logger.error("error loading cursor.gif " + e);
+			}
 
         	logger.debug( "CaptureScreen: x=" + x + ", y=" + y + ", w=" + width + ", h=" + height );
 
@@ -467,34 +595,40 @@ public class ScreenShare {
 		{
 			final int blockWidth = 32;
 			final int blockHeight = 32;
+			double widthTransformScale = 0.5;
+			double heightTransformScale = 0.5;
 
 			final int timeBetweenFrames = 1000; //frameRate
 
-			int frameCounter = 0;
+			widthTransformScale = width > 1024 ? (double) (width/1024) : 1;
+			heightTransformScale = height > 768 ? (double) (height/768) : 1;
+
+        	AffineTransformOp affinetransformop = new AffineTransformOp(AffineTransform.getScaleInstance(widthTransformScale, heightTransformScale), new RenderingHints(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC));
 
 			try
 			{
-				Robot robot = new Robot();
+				ScreenCodec screenCodec;
 
-				byte[] previous = null;
+				if ("flashsv1".equals(codec))
+					screenCodec = new ScreenCodec1(width, height);
+				else
+					screenCodec = new ScreenCodec2(width, height);
 
 				while (active)
 				{
 					final long ctime = System.currentTimeMillis();
 
-					BufferedImage image = robot.createScreenCapture(new Rectangle(x, y, width, height));
-
-					byte[] current = toBGR(image);
-
 					try
 					{
+						BufferedImage image = robot.createScreenCapture(new Rectangle(x, y, width, height));
+						BufferedImage image1 = addCursor(image);
+						//BufferedImage image2 = affinetransformop.filter(image1, null);
+
 						timestamp =  System.currentTimeMillis() - startTime;
 
-						final byte[] screenBytes = encode(current, previous, blockWidth, blockHeight, width, height);
+						final byte[] screenBytes = screenCodec.encode(image1);
 						pushVideo(screenBytes, timestamp);
-						previous = current;
 
-						if (++frameCounter % 100 == 0) previous = null;
 					}
 					catch (Exception e)
 					{
@@ -512,141 +646,17 @@ public class ScreenShare {
 			}
 		}
 
-
-		// ------------------------------------------------------------------------
-		//
-		// Private
-		//
-		// ------------------------------------------------------------------------
-
-		private byte[] toBGR(BufferedImage image)
+		private BufferedImage addCursor(BufferedImage image)
 		{
-			final int width = image.getWidth();
-			final int height = image.getHeight();
+			BufferedImage newImage = image;
 
-			byte[] buf = new byte[3 * width * height];
+			Point point = MouseInfo.getPointerInfo().getLocation();
 
-			final DataBuffer buffer = image.getData().getDataBuffer();
+			Graphics2D g2d = newImage.createGraphics();
+			g2d.drawImage(cursorImage, new AffineTransform(1f,0f,0f,1f, point.x, point.y), null);
+			g2d.dispose();
 
-			for (int y = 0; y < height; y++)
-			{
-				for (int x = 0; x < width; x++)
-				{
-					final int rgb = buffer.getElem(y * width + x);
-					final int offset = 3 * (y * width + x);
-
-					buf[offset + 0] = (byte) (rgb & 0xFF);
-					buf[offset + 1] = (byte) ((rgb >> 8) & 0xFF);
-					buf[offset + 2] = (byte) ((rgb >> 16) & 0xFF);
-				}
-			}
-
-			return buf;
-		}
-
-
-		private byte[] encode(final byte[] current, final byte[] previous, final int blockWidth, final int blockHeight, final int width, final int height) throws Exception
-		{
-			ByteArrayOutputStream baos = new ByteArrayOutputStream(16 * 1024);
-
-			if (previous == null)
-			{
-				baos.write(getTag(0x01, 0x03));		// keyframe (all cells)
-			}
-			else
-			{
-				baos.write(getTag(0x02, 0x03));		// frame (changed cells)
-			}
-
-			// write header
-			final int wh = width + ((blockWidth / 16 - 1) << 12);
-			final int hh = height + ((blockHeight / 16 - 1) << 12);
-
-			writeShort(baos, wh);
-			writeShort(baos, hh);
-
-			// write content
-			int y0 = height;
-			int x0 = 0;
-			int bwidth = blockWidth;
-			int bheight = blockHeight;
-
-			while (y0 > 0)
-			{
-				bheight = Math.min(y0, blockHeight);
-				y0 -= bheight;
-
-				bwidth = blockWidth;
-				x0 = 0;
-
-				while (x0 < width)
-				{
-					bwidth = (x0 + blockWidth > width) ? width - x0 : blockWidth;
-
-					final boolean changed = isChanged(current, previous, x0, y0, bwidth, bheight, width, height);
-
-					if (changed)
-					{
-						ByteArrayOutputStream blaos = new ByteArrayOutputStream(4 * 1024);
-
-						DeflaterOutputStream dos = new DeflaterOutputStream(blaos);
-
-						for (int y = 0; y < bheight; y++)
-						{
-							dos.write(current, 3 * ((y0 + bheight - y - 1) * width + x0), 3 * bwidth);
-						}
-
-						dos.finish();
-
-						final byte[] bbuf = blaos.toByteArray();
-						final int written = bbuf.length;
-
-						// write DataSize
-						writeShort(baos, written);
-						// write Data
-						baos.write(bbuf, 0, written);
-					}
-					else
-					{
-						// write DataSize
-						writeShort(baos, 0);
-					}
-
-					x0 += bwidth;
-				}
-			}
-
-			return baos.toByteArray();
-		}
-
-		private void writeShort(OutputStream os, final int n) throws Exception
-		{
-			os.write((n >> 8) & 0xFF);
-			os.write((n >> 0) & 0xFF);
-		}
-
-		public boolean isChanged(final byte[] current, final byte[] previous, final int x0, final int y0, final int blockWidth, final int blockHeight, final int width, final int height)
-		{
-			if (previous == null) return true;
-
-			for (int y = y0, ny = y0 + blockHeight; y < ny; y++)
-			{
-				final int foff = 3 * (x0 + width * y);
-				final int poff = 3 * (x0 + width * y);
-
-				for (int i = 0, ni = 3 * blockWidth; i < ni; i++)
-				{
-					if (current[foff + i] != previous[poff + i]) return true;
-				}
-			}
-
-			return false;
-		}
-
-
-		public int getTag(final int frame, final int codec)
-		{
-			return ((frame & 0x0F) << 4) + ((codec & 0x0F) << 0);
+			return newImage;
 		}
 	}
 
