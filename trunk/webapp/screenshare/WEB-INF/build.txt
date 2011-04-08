@@ -1,0 +1,7 @@
+Buildfile: build.xml
+
+compile:
+    [javac] Compiling 1 source file to C:\Program Files\Red5\webapps\screenshare\WEB-INF\classes
+
+BUILD SUCCESSFUL
+Total time: 2 seconds
