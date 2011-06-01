@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" creationComplete="init()" width="100%" height="100%">
+
+  <mx:Script>
+  <![CDATA[
+
+	import flash.net.NetConnection;
+	import flash.external.*;
+	import mx.core.*;
+				
+	private var netConnection:NetConnection = null;
+	private var incomingNetStream:NetStream = null;
+	
+	private var recieverStream:String = "screen_share";
+	private var rtmpUrl:String = "rtmp:/oflaDemo";	
+	private var control:String = "true";
+	private var remoteControl:Boolean = false;
+	
+	private var video:Video;
+			
+	private function init():void 
+	{
+		ExternalInterface.addCallback("windowCloseEvent", windowCloseEvent);
+		
+		rtmpUrl 	= FlexGlobals.topLevelApplication.parameters.rtmpUrl;
+		recieverStream 	= FlexGlobals.topLevelApplication.parameters.recieverStream;
+		control 	= FlexGlobals.topLevelApplication.parameters.control;
+		
+		NetConnection.defaultObjectEncoding = flash.net.ObjectEncoding.AMF0;					
+		netConnection = new NetConnection();
+		netConnection.objectEncoding = ObjectEncoding.AMF0;		
+		netConnection.client = this;
+		netConnection.addEventListener( NetStatusEvent.NET_STATUS , netStatus );
+		netConnection.addEventListener(SecurityErrorEvent.SECURITY_ERROR, securityErrorHandler);
+		
+		netConnection.connect(rtmpUrl);		
+	}
+
+	public function onBWDone():*
+	{
+	
+	} 
+
+	public function windowCloseEvent():void 
+	{
+		disconnected();
+	}
+	
+	
+	private function netStatus (evt:NetStatusEvent ):void 
+	{		    	
+		switch(evt.info.code) {
+		
+		case "NetConnection.Connect.Success":
+			connected()
+			break;
+
+		case "NetConnection.Connect.Failed":
+			break;
+
+		case "NetConnection.Connect.Rejected":
+			break;
+
+		case "NetStream.Play.StreamNotFound":
+			break;
+
+		case "NetStream.Play.Failed":		
+			break;
+			
+		case "NetStream.Play.Start":					
+			break;
+			
+		case "NetStream.Play.Stop":
+			connected();
+			break;
+			
+		case "NetStream.Buffer.Full":
+			break;
+
+		default:
+
+		}		    	
+
+	}
+
+	private function connected():void 
+	{
+		incomingNetStream = new NetStream(netConnection);
+		incomingNetStream.receiveVideo(true);
+		incomingNetStream.addEventListener(NetStatusEvent.NET_STATUS, netStatus);
+		incomingNetStream.addEventListener(AsyncErrorEvent.ASYNC_ERROR, asyncErrorHandler);
+		
+		var netStreamClientObj:Object = new Object();
+		incomingNetStream.client = netStreamClientObj 
+
+    		netStreamClientObj.onMetaData = function(infoObject:Object):void
+    		{ 
+    		
+    		};  
+    
+		netStreamClientObj.onPlayStatus = function(infoObject:Object):void 
+		{      
+
+		}; 
+		
+		incomingNetStream.bufferTime = 0; 
+		
+		video = new Video();
+    		video.width = this.width;
+    		video.height = this.height;  		
+		video_uic.addChild (video); 
+		video.attachNetStream(incomingNetStream);
+		
+		incomingNetStream.play(recieverStream); 
+
+		if (control == "true")
+		{
+			video_uic.doubleClickEnabled = true;
+			video_uic.addEventListener(MouseEvent.DOUBLE_CLICK, doubleClick);			
+		}			
+	}
+
+
+	private function disconnected():void 
+	{
+		incomingNetStream.play(false); 		
+		netConnection.close();		
+	}
+	
+        private function asyncErrorHandler(event:AsyncErrorEvent):void 
+        {
+		
+        }
+	
+        private function securityErrorHandler(event:SecurityErrorEvent):void 
+        {
+
+        }        
+
+        private function keyDHandler(event:KeyboardEvent):void 
+        {
+            	netConnection.call("keyPress", null, recieverStream, event.keyCode);
+        }
+
+        private function keyUHandler(event:KeyboardEvent):void 
+        {
+            	netConnection.call("keyRelease", null, recieverStream, event.keyCode);
+        }
+
+	private function mouseMove(event:MouseEvent):void
+	{
+	   	netConnection.call("mouseMove", null, recieverStream, event.stageX, event.stageY, video_uic.width, video_uic.height);
+	}	
+
+	private function doubleClick(event:MouseEvent):void
+	{
+		if (remoteControl)
+		{	
+	   		netConnection.call("doubleClick", null, recieverStream, event.stageX, event.stageY, video_uic.width, video_uic.height);
+			
+		} else {
+		
+			remoteControl = true;	
+		
+			video_uic.addEventListener(MouseEvent.MOUSE_MOVE, mouseMove);
+			video_uic.addEventListener(MouseEvent.MOUSE_DOWN, mouseDown);
+			video_uic.addEventListener(MouseEvent.MOUSE_UP, mouseUp);
+			
+			stage.addEventListener(KeyboardEvent.KEY_UP, keyUHandler);	
+			stage.addEventListener(KeyboardEvent.KEY_DOWN, keyDHandler);			
+	   	}
+	}
+	
+	private function mouseDown(event:MouseEvent):void
+	{
+	   	netConnection.call("mousePress", null, recieverStream, 1);
+	}
+
+	private function mouseUp(event:MouseEvent):void
+	{
+	   	netConnection.call("mouseRelease", null, recieverStream, 1);
+	}
+	
+  ]]>
+  </mx:Script>
+
+ <mx:UIComponent id="video_uic" x="0" y="0" width="100%" height="100%"/> 
+</mx:Application>
