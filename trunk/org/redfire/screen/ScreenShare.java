@@ -51,7 +51,8 @@ public class ScreenShare {
     public Integer playStreamId;
     public Integer publishStreamId;
     public String publishName;
-    public String codec = "flashsv1";
+    public String codec = "flashsv2";
+    public int frameRate = 10;
 
 	public CaptureScreen capture = null;
 	public Thread thread = null;
@@ -107,19 +108,23 @@ public class ScreenShare {
 	{
 		instance = ScreenShare.getInstance();
 
-		if (args.length == 5) {
+		if (args.length == 6) {
 			instance.host = args[0];
 			instance.app = args[1];
 			instance.port = Integer.parseInt(args[2]);
 			instance.publishName = args[3];
 			instance.codec = args[4];
 
+			try {
+				instance.frameRate = Integer.parseInt(args[5]);
+			} catch (Exception e) {}
+
 			System.out.println("User home " + System.getProperty("user.home"));
 			System.out.println("User Dir " + System.getProperty("user.dir"));
 
 		} else {
 			instance = null;
-			System.out.println("\nRed5 SceenShare: use as java ScreenShare <host> <app name> <port> <stream name>\n Example: SceenShare localhost oflaDemo 1935 screen_stream");
+			System.out.println("\nRed5 SceenShare: use as java ScreenShare <host> <app name> <port> <stream name> <codec> <frame rate>\n Example: SceenShare localhost oflaDemo 1935 screen_stream flashsv2 15");
 			System.exit(0);
 		}
 
@@ -598,7 +603,7 @@ public class ScreenShare {
 			double widthTransformScale = 0.5;
 			double heightTransformScale = 0.5;
 
-			final int timeBetweenFrames = 1000; //frameRate
+			final int timeBetweenFrames = 1000 / frameRate;
 
 			widthTransformScale = width > 1024 ? (double) (width/1024) : 1;
 			heightTransformScale = height > 768 ? (double) (height/768) : 1;
@@ -636,8 +641,14 @@ public class ScreenShare {
 					}
 
 					final int spent = (int) (System.currentTimeMillis() - ctime);
+					final int sleep = Math.max(0, timeBetweenFrames - spent);
 
-					Thread.sleep(Math.max(0, timeBetweenFrames - spent));
+        			if ( kt < 50 ) {
+            			logger.debug( "Sleep " + sleep );
+            			System.out.println( "Sleep " + sleep);
+					}
+
+					Thread.sleep(sleep);
 				}
 			}
 			catch (Exception e)

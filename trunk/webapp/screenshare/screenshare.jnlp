@@ -21,5 +21,6 @@
     	<argument>1935</argument> 
     	<argument>screen_share</argument>   
     	<argument>flashsv2</argument>      	
+    	<argument>30</argument>      	
     </application-desc> 
 </jnlp>
