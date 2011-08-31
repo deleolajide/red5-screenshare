@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.*;
-import java.awt.geom.AffineTransform;
+import java.awt.geom.*;
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.util.Map;
@@ -52,7 +52,10 @@ public class ScreenShare {
     public Integer publishStreamId;
     public String publishName;
     public String codec = "flashsv2";
-    public int frameRate = 30;
+    public int maxWidth = 1024;
+    public int maxHeight = 768;
+    public int frameRate = 10;
+    public boolean exitOnClose = true;
 
 	public CaptureScreen capture = null;
 	public Thread thread = null;
@@ -108,7 +111,7 @@ public class ScreenShare {
 	{
 		instance = ScreenShare.getInstance();
 
-		if (args.length == 6) {
+		if (args.length == 8) {
 			instance.host = args[0];
 			instance.app = args[1];
 			instance.port = Integer.parseInt(args[2]);
@@ -117,6 +120,9 @@ public class ScreenShare {
 
 			try {
 				instance.frameRate = Integer.parseInt(args[5]);
+				instance.maxWidth = Integer.parseInt(args[6]);
+				instance.maxHeight = Integer.parseInt(args[7]);
+
 			} catch (Exception e) {}
 
 			System.out.println("User home " + System.getProperty("user.home"));
@@ -124,7 +130,7 @@ public class ScreenShare {
 
 		} else {
 			instance = null;
-			System.out.println("\nRed5 SceenShare: use as java ScreenShare <host> <app name> <port> <stream name> <codec> <frame rate>\n Example: SceenShare localhost oflaDemo 1935 screen_stream flashsv2 15");
+			System.out.println("\nRed5 SceenShare: use as java ScreenShare <host> <app name> <port> <stream name> <codec> <frame rate> <max width> <max height>\n Example: SceenShare localhost oflaDemo 1935 screen_stream flashsv2 15 1024 768");
 			System.exit(0);
 		}
 
@@ -141,7 +147,6 @@ public class ScreenShare {
 
 		return instance;
 	}
-
 
     // ------------------------------------------------------------------------
     //
@@ -215,6 +220,7 @@ public class ScreenShare {
 					// TODO Auto-generated method stub
 					t.setVisible(false);
 					stopStream();
+					if (exitOnClose) System.exit(0);
 				}
 			});
 			exitButton.setBounds(190, 370, 200, 24);
@@ -531,6 +537,8 @@ public class ScreenShare {
 		private volatile boolean active = true;
 		private volatile boolean stopped = false;
 		private BufferedImage cursorImage;
+		private GraphicsConfiguration configuration = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDefaultConfiguration();
+
 
 		// ------------------------------------------------------------------------
 		//
@@ -598,26 +606,23 @@ public class ScreenShare {
 
 		public void run()
 		{
-			final int blockWidth = 32;
-			final int blockHeight = 32;
-			double widthTransformScale = 0.5;
-			double heightTransformScale = 0.5;
+			boolean rescale = false;
+
+			if (width > maxWidth)
+			{
+				rescale = true;
+			}
 
 			final int timeBetweenFrames = 1000 / frameRate;
-
-			widthTransformScale = width > 1024 ? (double) (width/1024) : 1;
-			heightTransformScale = height > 768 ? (double) (height/768) : 1;
-
-        	AffineTransformOp affinetransformop = new AffineTransformOp(AffineTransform.getScaleInstance(widthTransformScale, heightTransformScale), new RenderingHints(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC));
 
 			try
 			{
 				ScreenCodec screenCodec;
 
 				if ("flashsv1".equals(codec))
-					screenCodec = new ScreenCodec1(width, height);
+					screenCodec = new ScreenCodec1(rescale ? maxWidth : width, rescale ? maxHeight : height);
 				else
-					screenCodec = new ScreenCodec2(width, height);
+					screenCodec = new ScreenCodec2(rescale ? maxWidth : width, rescale ? maxHeight : height);
 
 				while (active)
 				{
@@ -627,7 +632,11 @@ public class ScreenShare {
 					{
 						BufferedImage image = robot.createScreenCapture(new Rectangle(x, y, width, height));
 						BufferedImage image1 = addCursor(x, y, image);
-						//BufferedImage image2 = affinetransformop.filter(image1, null);
+
+						if (rescale)
+						{
+							image1 = scaleImage(image1, maxWidth, maxHeight);
+						}
 
 						timestamp =  System.currentTimeMillis() - startTime;
 
@@ -669,6 +678,17 @@ public class ScreenShare {
 
 			return newImage;
 		}
+
+        private BufferedImage scaleImage(BufferedImage orig, int w, int h)
+        {
+           	BufferedImage tmp = configuration.createCompatibleImage(w, h, Transparency.TRANSLUCENT);
+           	Graphics2D g2 = tmp.createGraphics();
+ 			g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        	g2.drawImage(orig, 0, 0, w, h, null);
+            g2.dispose();
+
+            return tmp;
+        }
 	}
 
 }
