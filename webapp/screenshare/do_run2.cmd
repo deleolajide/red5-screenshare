@@ -1,2 +1,2 @@
-"C:\Program Files\Java\jdk1.6.0_01\bin\java" -classpath screenshare.jar org.redfire.screen.ScreenShare  btg199251 screenshare 1935 screen_share flashsv2 30
+"C:\Program Files\Java\jdk1.6.0_01\bin\java" -classpath .;screenshare.jar org.redfire.screen.ScreenShare  btg199251 xmpp 1935 screen_share flashsv2 10 1024 768
 pause

@@ -16,11 +16,13 @@
         <jar href='screenshare.jar'/> 
     </resources> 
     <application-desc main-class='org.redfire.screen.ScreenShare'>
-    	<argument>btg199251</argument> 
+    	<argument>localhost</argument> 
     	<argument>screenshare</argument> 
     	<argument>1935</argument> 
     	<argument>screen_share</argument>   
     	<argument>flashsv2</argument>      	
-    	<argument>30</argument>      	
+    	<argument>10</argument>      	
+    	<argument>1024</argument>   
+    	<argument>768</argument>       	
     </application-desc> 
 </jnlp>
